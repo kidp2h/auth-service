@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package user;
+
+service UserService {
+  rpc CreateProfile (CreateProfileRequest) returns (ProfileResponse);
+}
+
+message CreateProfileRequest {
+  string account_id = 1;
+  string email = 2;
+  string name = 3;
+}
+
+message ProfileResponse {
+  string id = 1;
+  string account_id = 2;
+  string email = 3;
+  string name = 4;
+}

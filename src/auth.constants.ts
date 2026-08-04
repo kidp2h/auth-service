@@ -1,0 +1,5 @@
+export const ACCOUNT_PORT = 'ACCOUNT_PORT';
+export const SESSION_PORT = 'SESSION_PORT';
+export const HASH_SERVICE = 'HASH_SERVICE';
+export const TOKEN_SERVICE = 'TOKEN_SERVICE';
+export const USER_PROFILE_PORT = 'USER_PROFILE_PORT';
