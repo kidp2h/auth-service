@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { JwtModule } from '@nestjs/jwt';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 import { join } from 'path';
 import { AuthController } from './presentation/controllers/auth.controller';
@@ -15,54 +16,30 @@ import { JwtTokenService } from './infrastructure/services/jwt-token.service';
 import { Account } from '@domain/entities/account.entity';
 import { ACCOUNT_PORT, SESSION_PORT, HASH_SERVICE, TOKEN_SERVICE, USER_PROFILE_PORT } from './auth.constants';
 
-const jwtSecret = process.env.JWT_SECRET;
-const profileServiceUrl = process.env.PROFILE_SERVICE_URL;
-const redisHost = process.env.REDIS_HOST;
-const redisPort = process.env.REDIS_PORT;
-const databaseUrl = process.env.DATABASE_URL;
-
-if (!jwtSecret) {
-  throw new Error('Missing required environment variable: JWT_SECRET');
-}
-
-// if (!profileServiceUrl) {
-//   throw new Error('Missing required environment variable: PROFILE_SERVICE_URL');
-// }
-
-if (!redisHost) {
-  throw new Error('Missing required environment variable: REDIS_HOST');
-}
-
-if (!redisPort) {
-  throw new Error('Missing required environment variable: REDIS_PORT');
-}
-
-if (!databaseUrl) {
-  throw new Error('Missing required environment variable: DATABASE_URL');
-}
-
 @Module({
   imports: [
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      url: databaseUrl,
-      autoLoadEntities: true,
-      synchronize: true, // Only for development/demo
-    }),
     TypeOrmModule.forFeature([Account]),
-    JwtModule.register({
-      secret: jwtSecret,
-      signOptions: { expiresIn: '1h' },
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        secret: configService.get<string>('JWT_SECRET'),
+        signOptions: { expiresIn: '1h' },
+      }),
     }),
-    ClientsModule.register([
+    ClientsModule.registerAsync([
       {
         name: 'USER_PACKAGE',
-        transport: Transport.GRPC,
-        options: {
-          package: 'user',
-          protoPath: join(__dirname, 'infrastructure/proto/user.proto'),
-          url: profileServiceUrl,
-        },
+        imports: [ConfigModule],
+        inject: [ConfigService],
+        useFactory: (configService: ConfigService) => ({
+          transport: Transport.GRPC,
+          options: {
+            package: 'user',
+            protoPath: join(__dirname, 'infrastructure/proto/user.proto'),
+            url: configService.get<string>('PROFILE_SERVICE_URL') || 'profile-service:50051',
+          },
+        }),
       },
     ]),
   ],
@@ -71,10 +48,11 @@ if (!databaseUrl) {
     AuthService,
     {
       provide: 'REDIS_CLIENT',
-      useFactory: () => {
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => {
         return new Redis({
-          host: redisHost,
-          port: parseInt(redisPort, 10),
+          host: configService.get<string>('REDIS_HOST')!,
+          port: configService.get<number>('REDIS_PORT')!,
         });
       },
     },
@@ -99,5 +77,6 @@ if (!databaseUrl) {
       useClass: JwtTokenService,
     },
   ],
+  exports: [AuthService, ACCOUNT_PORT, SESSION_PORT],
 })
 export class AuthModule {}

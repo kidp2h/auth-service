@@ -1,28 +1,76 @@
 version: '3.8'
 
 services:
-  postgres:
-    image: postgres:15-alpine
+  auth-postgres:
+    image: postgres:16-alpine
     container_name: auth-postgres-dev
     restart: always
-    ports:
-      - "55432:5432"
     environment:
       POSTGRES_DB: auth_db
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
+    ports:
+      - "55432:5432" # Map to 55432 on host to avoid port 5432 conflict
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - auth_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d auth_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - auth-network
 
-  redis:
+  auth-redis:
     image: redis:7-alpine
     container_name: auth-redis-dev
     restart: always
     ports:
-      - "56379:6379"
+      - "56379:6379" # Map to 56379 on host to avoid port 6379 conflict
     volumes:
-      - redis_data:/data
+      - auth_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - auth-network
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: auth-service
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+      - "50052:50052"
+    env_file:
+      - .env
+    volumes:
+      - ./src:/usr/src/app/src
+      - ./nest-cli.json:/usr/src/app/nest-cli.json
+      - ./tsconfig.json:/usr/src/app/tsconfig.json
+      - ./tsconfig.build.json:/usr/src/app/tsconfig.build.json
+      - ./package.json:/usr/src/app/package.json
+      # Prevent host node_modules from overwriting container node_modules
+      - /usr/src/app/node_modules
+    depends_on:
+      auth-postgres:
+        condition: service_healthy
+      auth-redis:
+        condition: service_healthy
+    networks:
+      - auth-network
 
 volumes:
-  postgres_data:
-  redis_data:
+  auth_postgres_data:
+    driver: local
+  auth_redis_data:
+    driver: local
+
+networks:
+  auth-network:
+    driver: bridge

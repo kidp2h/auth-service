@@ -3,8 +3,12 @@
   "collection": "@nestjs/schematics",
   "sourceRoot": "src",
   "compilerOptions": {
-    "deleteOutDir": false,
-    "assets": ["infrastructure/proto/**/*.proto"],
-    "watchAssets": true
+    "deleteOutDir": true,
+    "assets": [
+      {
+        "include": "**/*.proto",
+        "watchAssets": true
+      }
+    ]
   }
 }

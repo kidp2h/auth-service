@@ -1,27 +1,17 @@
-import { existsSync } from 'fs';
-
-// Load .env file natively in Node v20.12.0+ / v21.7.0+ for local development
-if (existsSync('.env')) {
-  process.loadEnvFile('.env');
-}
-
 import { NestFactory } from '@nestjs/core';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
+import { Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { join } from 'path';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const port = process.env.PORT;
-  const authGrpcUrl = process.env.AUTH_GRPC_URL;
-
-  if (!port) {
-    throw new Error('Missing required environment variable: PORT');
-  }
-  if (!authGrpcUrl) {
-    throw new Error('Missing required environment variable: AUTH_GRPC_URL');
-  }
-
+  const logger = new Logger('Bootstrap');
   const app = await NestFactory.create(AppModule);
+
+  const configService = app.get(ConfigService);
+  const port = configService.get<number>('PORT')!;
+  const authGrpcUrl = configService.get<string>('AUTH_GRPC_URL')!;
 
   app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.GRPC,
@@ -34,5 +24,8 @@ async function bootstrap() {
 
   await app.startAllMicroservices();
   await app.listen(port);
+
+  logger.log(`🚀 Auth Service (REST) is running on: http://localhost:${port}`);
+  logger.log(`🔌 Auth Service (gRPC) is running on: ${authGrpcUrl}`);
 }
 bootstrap();

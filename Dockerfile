@@ -1,50 +1,59 @@
-# Stage 1: Build stage
-FROM node:20-alpine AS builder
+# ==============================================================================
+# Base stage
+# ==============================================================================
+FROM node:22-alpine AS base
 
 WORKDIR /usr/src/app
 
-# Cài đặt công cụ build cho các thư viện C++ native như argon2 (Python, make, g++)
+# Install build tools for native C++ modules (e.g. argon2)
 RUN apk add --no-cache python3 make g++
 
-# Copy dependency configs
+# ==============================================================================
+# Development stage (used for docker-compose dev with hot-reload)
+# ==============================================================================
+FROM base AS development
+
 COPY package*.json ./
+RUN npm install
 
-# Cài đặt tất cả dependencies
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci
-
-# Copy source code
 COPY . .
 
-# Build dự án NestJS
+EXPOSE 3000 50052
+
+CMD ["npm", "run", "start:dev"]
+
+# ==============================================================================
+# Builder stage (compiles TypeScript to dist)
+# ==============================================================================
+FROM base AS builder
+
+COPY package*.json ./
+RUN npm ci
+
+COPY . .
+
 RUN npm run build
 
-# Loại bỏ devDependencies để thu nhỏ dung lượng node_modules
-RUN npm prune --production
+# Prune dev dependencies to leave only production dependencies
+RUN npm prune --omit=dev
 
-# Stage 2: Production runtime stage
-FROM node:20-alpine AS runner
+# ==============================================================================
+# Production stage (lightweight production image)
+# ==============================================================================
+FROM node:22-alpine AS production
+
+WORKDIR /usr/src/app
 
 ENV NODE_ENV=production
 
-WORKDIR /usr/src/app
-
-# Copy package.json để ứng dụng đọc metadata nếu cần
-COPY package*.json ./
-
-# Copy trực tiếp node_modules đã tối ưu từ Stage 1 (KHÔNG cần npm ci lại)
-COPY --from=builder /usr/src/app/node_modules ./node_modules
-
-# Copy built code từ Stage 1
-COPY --from=builder /usr/src/app/dist ./dist
-COPY --from=builder /usr/src/app/src/infrastructure/proto ./dist/infrastructure/proto
-
-# Set ownership cho user 'node'
-RUN chown -R node:node /usr/src/app
-
+# Copy non-root user node configuration
 USER node
 
-EXPOSE 3000
-EXPOSE 50052
+# Copy production node_modules and built dist artifacts
+COPY --chown=node:node --from=builder /usr/src/app/node_modules ./node_modules
+COPY --chown=node:node --from=builder /usr/src/app/dist ./dist
+COPY --chown=node:node --from=builder /usr/src/app/package*.json ./
 
-CMD ["node", "dist/main"]
+EXPOSE 3000 50052
+
+CMD ["node", "dist/main.js"]
