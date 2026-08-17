@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "tsBuildInfoFile": "./dist/tsconfig.tsbuildinfo",
     "types": ["node"],
     "module": "nodenext",
     "moduleResolution": "nodenext",
