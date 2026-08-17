@@ -33,8 +33,8 @@ export class EnvironmentVariables {
   JWT_SECRET!: string;
 
   @IsString()
-  @IsOptional()
-  PROFILE_SERVICE_URL?: string;
+  @IsNotEmpty()
+  PROFILE_SERVICE_URL!: string;
 
   @IsString()
   @IsOptional()

@@ -18,7 +18,7 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "docker:publish": "npm run build && docker build -t nthinhd3v/auth-nest-kafka:latest . && docker push nthinhd3v/auth-nest-kafka:latest"
+    "docker:publish": "npm run build && docker build -t nthinhd3v/auth-service:latest . && docker push nthinhd3v/auth-service:latest"
   },
   "dependencies": {
     "@grpc/grpc-js": "^1.14.4",

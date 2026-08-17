@@ -18,7 +18,7 @@ RUN npm install
 
 COPY . .
 
-EXPOSE 3000 50052
+EXPOSE 3000 50051
 
 CMD ["npm", "run", "start:dev"]
 
@@ -54,6 +54,6 @@ COPY --chown=node:node --from=builder /usr/src/app/node_modules ./node_modules
 COPY --chown=node:node --from=builder /usr/src/app/dist ./dist
 COPY --chown=node:node --from=builder /usr/src/app/package*.json ./
 
-EXPOSE 3000 50052
+EXPOSE 3000 50051
 
 CMD ["node", "dist/main.js"]

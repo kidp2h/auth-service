@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   auth-postgres:
     image: postgres:16-alpine
@@ -10,7 +8,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
-      - "55432:5432" # Map to 55432 on host to avoid port 5432 conflict
+      - "15432:5432" # Map to 15432 on host to avoid port conflicts
     volumes:
       - auth_postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -26,7 +24,7 @@ services:
     container_name: auth-redis-dev
     restart: always
     ports:
-      - "56379:6379" # Map to 56379 on host to avoid port 6379 conflict
+      - "16379:6379" # Map to 16379 on host to avoid port conflicts
     volumes:
       - auth_redis_data:/data
     healthcheck:
@@ -46,7 +44,7 @@ services:
     restart: unless-stopped
     ports:
       - "3000:3000"
-      - "50052:50052"
+      - "15050:50051"
     env_file:
       - .env
     volumes:

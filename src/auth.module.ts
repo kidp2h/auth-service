@@ -43,9 +43,7 @@ import {
           options: {
             package: 'user',
             protoPath: join(__dirname, 'infrastructure/proto/user.proto'),
-            url:
-              configService.get<string>('PROFILE_SERVICE_URL') ||
-              'profile-service:50051',
+            url: configService.get<string>('PROFILE_SERVICE_URL')!,
           },
         }),
       },
