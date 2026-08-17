@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UsePipes, ValidationPipe, Req } from '@nestjs/common';
+import { Controller, Post, Get, Body, UsePipes, ValidationPipe, Req } from '@nestjs/common';
 import { Request } from 'express';
 import { AuthService } from '@application/services/auth.service';
 import { RegisterDto } from '@application/dtos/register.dto';
@@ -7,6 +7,11 @@ import { LoginDto } from '@application/dtos/login.dto';
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
+
+  @Get('health')
+  health() {
+    return { status: 'ok', timestamp: new Date().toISOString() };
+  }
 
   @Post('register')
   @UsePipes(new ValidationPipe({ whitelist: true }))

@@ -21,7 +21,7 @@ export class UserProfileGrpcAdapter implements IUserProfilePort, OnModuleInit {
   constructor(@Inject('USER_PACKAGE') private readonly client: ClientGrpc) {}
 
   onModuleInit() {
-    this.userProfileServiceClient = this.client.getService<UserProfileGrpcServiceClient>('UserService');
+    this.userProfileServiceClient = this.client.getService<UserProfileGrpcServiceClient>('ProfileService');
   }
 
   async createProfile(accountId: string, email: string, name: string): Promise<{ id: string; name: string }> {

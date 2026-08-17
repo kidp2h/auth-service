@@ -1,0 +1,8 @@
+node_modules
+dist
+.git
+.env
+.npm
+README.md
+k8s
+*.tsbuildinfo

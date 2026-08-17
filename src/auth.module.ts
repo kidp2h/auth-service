@@ -16,7 +16,7 @@ import { Account } from '@domain/entities/account.entity';
 import { ACCOUNT_PORT, SESSION_PORT, HASH_SERVICE, TOKEN_SERVICE, USER_PROFILE_PORT } from './auth.constants';
 
 const jwtSecret = process.env.JWT_SECRET;
-const userServiceUrl = process.env.USER_SERVICE_URL;
+const profileServiceUrl = process.env.PROFILE_SERVICE_URL;
 const redisHost = process.env.REDIS_HOST;
 const redisPort = process.env.REDIS_PORT;
 const databaseUrl = process.env.DATABASE_URL;
@@ -25,9 +25,9 @@ if (!jwtSecret) {
   throw new Error('Missing required environment variable: JWT_SECRET');
 }
 
-if (!userServiceUrl) {
-  throw new Error('Missing required environment variable: USER_SERVICE_URL');
-}
+// if (!profileServiceUrl) {
+//   throw new Error('Missing required environment variable: PROFILE_SERVICE_URL');
+// }
 
 if (!redisHost) {
   throw new Error('Missing required environment variable: REDIS_HOST');
@@ -61,7 +61,7 @@ if (!databaseUrl) {
         options: {
           package: 'user',
           protoPath: join(__dirname, 'infrastructure/proto/user.proto'),
-          url: userServiceUrl,
+          url: profileServiceUrl,
         },
       },
     ]),

@@ -1,3 +1,10 @@
+import { existsSync } from 'fs';
+
+// Load .env file natively in Node v20.12.0+ / v21.7.0+ for local development
+if (existsSync('.env')) {
+  process.loadEnvFile('.env');
+}
+
 import { NestFactory } from '@nestjs/core';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { join } from 'path';
