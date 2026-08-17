@@ -14,7 +14,13 @@ import { RedisSessionAdapter } from '@infrastructure/clients/redis-session.adapt
 import { Argon2HashService } from '@infrastructure/services/argon2-hash.service';
 import { JwtTokenService } from './infrastructure/services/jwt-token.service';
 import { Account } from '@domain/entities/account.entity';
-import { ACCOUNT_PORT, SESSION_PORT, HASH_SERVICE, TOKEN_SERVICE, USER_PROFILE_PORT } from './auth.constants';
+import {
+  ACCOUNT_PORT,
+  SESSION_PORT,
+  HASH_SERVICE,
+  TOKEN_SERVICE,
+  USER_PROFILE_PORT,
+} from './auth.constants';
 
 @Module({
   imports: [
@@ -37,7 +43,9 @@ import { ACCOUNT_PORT, SESSION_PORT, HASH_SERVICE, TOKEN_SERVICE, USER_PROFILE_P
           options: {
             package: 'user',
             protoPath: join(__dirname, 'infrastructure/proto/user.proto'),
-            url: configService.get<string>('PROFILE_SERVICE_URL') || 'profile-service:50051',
+            url:
+              configService.get<string>('PROFILE_SERVICE_URL') ||
+              'profile-service:50051',
           },
         }),
       },

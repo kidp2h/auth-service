@@ -19,7 +19,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     if (host.getType() !== 'http') {
       this.logger.error(
         `RPC Exception caught by filter: ${
-          exception instanceof Error ? exception.message : exception
+          exception instanceof Error ? exception.message : String(exception)
         }`,
         exception instanceof Error ? exception.stack : '',
       );
@@ -44,17 +44,20 @@ export class AllExceptionsFilter implements ExceptionFilter {
       httpStatus = exception.getStatus();
       errorCode = this.mapHttpStatusToErrorCode(httpStatus);
       const response = exception.getResponse();
-      message = typeof response === 'object' && response !== null && 'message' in response
-        ? Array.isArray((response as any).message)
-          ? (response as any).message.join(', ')
-          : (response as any).message
-        : exception.message;
+      message =
+        typeof response === 'object' &&
+        response !== null &&
+        'message' in response
+          ? Array.isArray((response as any).message)
+            ? (response as any).message.join(', ')
+            : (response as any).message
+          : exception.message;
     }
     // 3. Handle unhandled exceptions (connection errors, database crashes, runtime errors)
     else {
       this.logger.error(
         `Unhandled exception caught by global filter: ${
-          exception instanceof Error ? exception.message : exception
+          exception instanceof Error ? exception.message : String(exception)
         }`,
         exception instanceof Error ? exception.stack : '',
       );

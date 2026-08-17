@@ -13,14 +13,12 @@ export class RedisSessionAdapter implements ISessionPort {
 
   async saveSession(session: AccountSession): Promise<void> {
     const key = this.getSessionKey(session.id);
-    const ttlSeconds = Math.max(1, Math.floor((session.expiresAt - Date.now()) / 1000));
-
-    await this.redis.set(
-      key,
-      JSON.stringify(session),
-      'EX',
-      ttlSeconds,
+    const ttlSeconds = Math.max(
+      1,
+      Math.floor((session.expiresAt - Date.now()) / 1000),
     );
+
+    await this.redis.set(key, JSON.stringify(session), 'EX', ttlSeconds);
   }
 
   async findSessionById(id: string): Promise<AccountSession | null> {

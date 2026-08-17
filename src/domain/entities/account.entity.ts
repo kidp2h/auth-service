@@ -14,7 +14,12 @@ export class Account {
   @Column({ name: 'user_id', type: 'uuid', nullable: true })
   userId?: string | null;
 
-  constructor(id: string, email: string, passwordHash: string, userId?: string | null) {
+  constructor(
+    id: string,
+    email: string,
+    passwordHash: string,
+    userId?: string | null,
+  ) {
     this.id = id;
     this.email = email;
     this.passwordHash = passwordHash;

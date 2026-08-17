@@ -4,7 +4,11 @@ import { IUserProfilePort } from '@domain/ports/user-profile.port';
 import { firstValueFrom, Observable } from 'rxjs';
 
 interface UserProfileGrpcServiceClient {
-  createProfile(data: { accountId: string; email: string; name: string }): Observable<ProfileGrpcResponse>;
+  createProfile(data: {
+    accountId: string;
+    email: string;
+    name: string;
+  }): Observable<ProfileGrpcResponse>;
 }
 
 interface ProfileGrpcResponse {
@@ -21,10 +25,15 @@ export class UserProfileGrpcAdapter implements IUserProfilePort, OnModuleInit {
   constructor(@Inject('USER_PACKAGE') private readonly client: ClientGrpc) {}
 
   onModuleInit() {
-    this.userProfileServiceClient = this.client.getService<UserProfileGrpcServiceClient>('ProfileService');
+    this.userProfileServiceClient =
+      this.client.getService<UserProfileGrpcServiceClient>('ProfileService');
   }
 
-  async createProfile(accountId: string, email: string, name: string): Promise<{ id: string; name: string }> {
+  async createProfile(
+    accountId: string,
+    email: string,
+    name: string,
+  ): Promise<{ id: string; name: string }> {
     const response = await firstValueFrom(
       this.userProfileServiceClient.createProfile({ accountId, email, name }),
     );

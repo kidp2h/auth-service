@@ -28,4 +28,4 @@ async function bootstrap() {
   logger.log(`🚀 Auth Service (REST) is running on: http://localhost:${port}`);
   logger.log(`🔌 Auth Service (gRPC) is running on: ${authGrpcUrl}`);
 }
-bootstrap();
+void bootstrap();

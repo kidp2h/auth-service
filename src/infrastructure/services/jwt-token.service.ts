@@ -6,8 +6,12 @@ import { ITokenService } from '@application/interfaces/token-service.interface';
 export class JwtTokenService implements ITokenService {
   constructor(private readonly jwtService: JwtService) {}
 
-  async generateToken(payload: { userId: string; email: string; jti?: string }): Promise<string> {
-    return this.jwtService.sign(payload);
+  async generateToken(payload: {
+    userId: string;
+    email: string;
+    jti?: string;
+  }): Promise<string> {
+    return this.jwtService.signAsync(payload);
   }
 
   async verifyToken(token: string): Promise<any> {

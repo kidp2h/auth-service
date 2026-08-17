@@ -16,7 +16,11 @@ export class TypeOrmAccountAdapter implements IAccountPort {
     return this.accountRepository.findOne({ where: { email } });
   }
 
-  async createAccount(email: string, passwordHash: string, userId?: string | null): Promise<Account> {
+  async createAccount(
+    email: string,
+    passwordHash: string,
+    userId?: string | null,
+  ): Promise<Account> {
     const id = randomUUID();
     const account = new Account(id, email, passwordHash, userId);
     return this.accountRepository.save(account);

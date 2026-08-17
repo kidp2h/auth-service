@@ -1,4 +1,10 @@
-import { CanActivate, ExecutionContext, Inject, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  CanActivate,
+  ExecutionContext,
+  Inject,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
 import type { ISessionPort } from '@domain/ports/session.port';
@@ -24,7 +30,9 @@ export class JwtBlacklistGuard implements CanActivate {
         throw new UnauthorizedException('Invalid token structure');
       }
 
-      const isBlacklisted = await this.sessionPort.isTokenBlacklisted(payload.jti);
+      const isBlacklisted = await this.sessionPort.isTokenBlacklisted(
+        payload.jti,
+      );
       if (isBlacklisted) {
         throw new UnauthorizedException('Token has been revoked');
       }
