@@ -1,0 +1,45 @@
+name: CI - Quality Gate
+
+on:
+  push:
+    branches:
+      - development
+      - staging
+      - master
+  pull_request:
+    branches:
+      - development
+      - staging
+      - master
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-and-test:
+    name: Lint, Test & TypeScript Build Verification
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository source code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js runtime dynamically from .nvmrc
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies strictly via package-lock
+        run: npm ci
+
+      - name: Step 1 - Execute ESLint code quality checks
+        run: npm run lint
+
+      - name: Step 2 - Execute unit test suite
+        run: npm test -- --passWithNoTests
+
+      - name: Step 3 - Verify TypeScript compilation and build output
+        run: npm run build

@@ -1,0 +1,62 @@
+name: CD - Trigger GitOps Deployment
+
+on:
+  workflow_run:
+    workflows: ["CD - Build & Publish Container Image"]
+    types:
+      - completed
+    branches:
+      - development
+      - staging
+      - master
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: false
+
+jobs:
+  dispatch-gitops:
+    name: Dispatch Deployment Event to Central GitOps
+    runs-on: ubuntu-latest
+    # Gatekeeper condition: Run ONLY if the Docker build & push workflow concluded successfully
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - name: Resolve deployment metadata payload
+        id: vars
+        run: |
+          BRANCH="${{ github.event.workflow_run.head_branch }}"
+          FULL_SHA="${{ github.event.workflow_run.head_sha }}"
+          SHORT_SHA=$(echo "$FULL_SHA" | cut -c1-7)
+
+          echo "Target branch: $BRANCH"
+          echo "Head commit SHA: $FULL_SHA"
+
+          if [ "$BRANCH" = "development" ]; then
+            echo "env=dev" >> $GITHUB_OUTPUT
+            echo "tag=dev-${SHORT_SHA}" >> $GITHUB_OUTPUT
+          elif [ "$BRANCH" = "staging" ]; then
+            echo "env=staging" >> $GITHUB_OUTPUT
+            echo "tag=staging-${SHORT_SHA}" >> $GITHUB_OUTPUT
+          elif [ "$BRANCH" = "master" ]; then
+            echo "env=prod" >> $GITHUB_OUTPUT
+            echo "tag=prod-${SHORT_SHA}" >> $GITHUB_OUTPUT
+          else
+            echo "env=dev" >> $GITHUB_OUTPUT
+            echo "tag=dev-${SHORT_SHA}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Dispatch repository webhook event to central GitOps repository
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.GITOPS_PAT_TOKEN }}
+          repository: kidp2h/ecommerce-microservices
+          event-type: service_updated
+          client-payload: |
+            {
+              "service": "auth",
+              "env": "${{ steps.vars.outputs.env }}",
+              "tag": "${{ steps.vars.outputs.tag }}",
+              "commit_sha": "${{ github.event.workflow_run.head_sha }}",
+              "branch": "${{ github.event.workflow_run.head_branch }}"
+            }

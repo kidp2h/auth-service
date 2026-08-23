@@ -1,0 +1,72 @@
+name: CD - Build & Publish Container Image
+
+on:
+  workflow_run:
+    workflows: ["CI - Quality Gate"]
+    types:
+      - completed
+    branches:
+      - development
+      - staging
+      - master
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: false
+
+jobs:
+  build-and-push:
+    name: Build & Push Container Image
+    runs-on: ubuntu-latest
+    # Gatekeeper condition: Run ONLY if the previous CI workflow concluded successfully
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - name: Checkout source code at the exact commit of the triggering CI run
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Resolve target environment and image tag
+        id: vars
+        run: |
+          BRANCH="${{ github.event.workflow_run.head_branch }}"
+          FULL_SHA="${{ github.event.workflow_run.head_sha }}"
+          SHORT_SHA=$(echo "$FULL_SHA" | cut -c1-7)
+
+          echo "Triggered branch: $BRANCH"
+          echo "Commit SHA: $SHORT_SHA"
+
+          if [ "$BRANCH" = "development" ]; then
+            echo "env=dev" >> $GITHUB_OUTPUT
+            echo "tag=dev-${SHORT_SHA}" >> $GITHUB_OUTPUT
+          elif [ "$BRANCH" = "staging" ]; then
+            echo "env=staging" >> $GITHUB_OUTPUT
+            echo "tag=staging-${SHORT_SHA}" >> $GITHUB_OUTPUT
+          elif [ "$BRANCH" = "master" ]; then
+            echo "env=prod" >> $GITHUB_OUTPUT
+            echo "tag=prod-${SHORT_SHA}" >> $GITHUB_OUTPUT
+          else
+            echo "env=dev" >> $GITHUB_OUTPUT
+            echo "tag=dev-${SHORT_SHA}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup Docker Buildx builder instance
+        uses: docker/setup-buildx-action@v3
+
+      - name: Authenticate to Docker Hub Container Registry
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push multi-tag container image to registry
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/auth-service:${{ steps.vars.outputs.tag }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/auth-service:${{ steps.vars.outputs.env }}-latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
