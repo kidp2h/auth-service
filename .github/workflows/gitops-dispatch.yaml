@@ -10,11 +10,6 @@ on:
       - staging
       - master
   workflow_dispatch:
-  push:
-    branches:
-      - development
-      - staging
-      - master
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.workflow_run.head_branch || github.ref }}

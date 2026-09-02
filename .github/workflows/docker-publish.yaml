@@ -10,11 +10,6 @@ on:
       - staging
       - master
   workflow_dispatch:
-  push:
-    branches:
-      - development
-      - staging
-      - master
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.workflow_run.head_branch || github.ref }}
@@ -30,9 +25,6 @@ jobs:
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITOPS_PAT_TOKEN }}
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Resolve target environment and image tag
         id: vars
