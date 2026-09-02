@@ -23,11 +23,11 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "docker:publish": "npm run build && docker build -t nthinhd3v/auth-service:latest . && docker push nthinhd3v/auth-service:latest",
-    "act:list": "act -l",
-    "act:ci": "act push -W .github/workflows/ci.yaml",
-    "act:docker": "act workflow_dispatch -W .github/workflows/docker-publish.yaml --secret-file .secrets",
-    "act:dispatch": "act workflow_dispatch -W .github/workflows/gitops-dispatch.yaml --secret-file .secrets",
-    "act:all": "act push -W .github/workflows/ci.yaml && act workflow_dispatch -W .github/workflows/docker-publish.yaml --secret-file .secrets && act workflow_dispatch -W .github/workflows/gitops-dispatch.yaml --secret-file .secrets"
+    "act:list": "act -l -W .github/workflows/ci-cd.yaml",
+    "act:ci": "act push -W .github/workflows/ci-cd.yaml -j quality-gate",
+    "act:docker": "act push -W .github/workflows/ci-cd.yaml -j build-and-push --secret-file .secrets",
+    "act:dispatch": "act push -W .github/workflows/ci-cd.yaml -j dispatch-gitops --secret-file .secrets",
+    "act:all": "act push -W .github/workflows/ci-cd.yaml --secret-file .secrets"
   },
   "dependencies": {
     "@grpc/grpc-js": "^1.14.4",
