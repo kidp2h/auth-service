@@ -9,24 +9,30 @@ on:
       - development
       - staging
       - master
+  workflow_dispatch:
+  push:
+    branches:
+      - development
+      - staging
+      - master
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.workflow_run.head_branch }}
+  group: ${{ github.workflow }}-${{ github.event.workflow_run.head_branch || github.ref }}
   cancel-in-progress: false
 
 jobs:
   dispatch-gitops:
     name: Dispatch Deployment Event to Central GitOps
     runs-on: ubuntu-latest
-    # Gatekeeper condition: Run ONLY if the Docker build & push workflow concluded successfully
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    # Gatekeeper condition: Run ONLY if triggered directly or previous Docker build workflow concluded successfully
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
 
     steps:
       - name: Resolve deployment metadata payload
         id: vars
         run: |
-          BRANCH="${{ github.event.workflow_run.head_branch }}"
-          FULL_SHA="${{ github.event.workflow_run.head_sha }}"
+          BRANCH="${{ github.event.workflow_run.head_branch || github.ref_name }}"
+          FULL_SHA="${{ github.event.workflow_run.head_sha || github.sha }}"
           SHORT_SHA=$(echo "$FULL_SHA" | cut -c1-7)
 
           echo "Target branch: $BRANCH"
@@ -57,6 +63,6 @@ jobs:
               "service": "auth",
               "env": "${{ steps.vars.outputs.env }}",
               "tag": "${{ steps.vars.outputs.tag }}",
-              "commit_sha": "${{ github.event.workflow_run.head_sha }}",
-              "branch": "${{ github.event.workflow_run.head_branch }}"
+              "commit_sha": "${{ github.event.workflow_run.head_sha || github.sha }}",
+              "branch": "${{ github.event.workflow_run.head_branch || github.ref_name }}"
             }

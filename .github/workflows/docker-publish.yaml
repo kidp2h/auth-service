@@ -9,29 +9,36 @@ on:
       - development
       - staging
       - master
+  workflow_dispatch:
+  push:
+    branches:
+      - development
+      - staging
+      - master
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.workflow_run.head_branch }}
+  group: ${{ github.workflow }}-${{ github.event.workflow_run.head_branch || github.ref }}
   cancel-in-progress: false
 
 jobs:
   build-and-push:
     name: Build & Push Container Image
     runs-on: ubuntu-latest
-    # Gatekeeper condition: Run ONLY if the previous CI workflow concluded successfully
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    # Gatekeeper condition: Run ONLY if triggered directly or previous CI workflow concluded successfully
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
 
     steps:
-      - name: Checkout source code at the exact commit of the triggering CI run
+      - name: Checkout source code
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          token: ${{ secrets.GITOPS_PAT_TOKEN }}
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Resolve target environment and image tag
         id: vars
         run: |
-          BRANCH="${{ github.event.workflow_run.head_branch }}"
-          FULL_SHA="${{ github.event.workflow_run.head_sha }}"
+          BRANCH="${{ github.event.workflow_run.head_branch || github.ref_name }}"
+          FULL_SHA="${{ github.event.workflow_run.head_sha || github.sha }}"
           SHORT_SHA=$(echo "$FULL_SHA" | cut -c1-7)
 
           echo "Triggered branch: $BRANCH"

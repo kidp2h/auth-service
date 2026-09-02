@@ -1,0 +1,8 @@
+# Default runner image for act (matches standard GitHub Actions ubuntu-latest runner)
+-P ubuntu-latest=catthehacker/ubuntu:act-latest
+
+# Ensure x86_64 architecture compatibility
+--container-architecture linux/amd64
+
+# Automatically remove containers after workflow execution
+--rm
