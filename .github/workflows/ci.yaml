@@ -39,7 +39,7 @@ jobs:
         run: npm run lint
 
       - name: Step 2 - Execute unit test suite
-        run: npm test -- --passWithNoTests
+        run: npm test -- --passWithNoTests --if-present
 
       - name: Step 3 - Verify TypeScript compilation and build output
         run: npm run build

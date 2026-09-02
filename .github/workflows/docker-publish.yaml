@@ -6,7 +6,6 @@ on:
     types:
       - completed
     branches:
-      - development
       - staging
       - master
   workflow_dispatch:
@@ -19,8 +18,7 @@ jobs:
   build-and-push:
     name: Build & Push Container Image
     runs-on: ubuntu-latest
-    # Gatekeeper condition: Run ONLY if triggered directly or previous CI workflow concluded successfully
-    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
 
     steps:
       - name: Checkout source code
@@ -36,18 +34,15 @@ jobs:
           echo "Triggered branch: $BRANCH"
           echo "Commit SHA: $SHORT_SHA"
 
-          if [ "$BRANCH" = "development" ]; then
-            echo "env=dev" >> $GITHUB_OUTPUT
-            echo "tag=dev-${SHORT_SHA}" >> $GITHUB_OUTPUT
-          elif [ "$BRANCH" = "staging" ]; then
+          if [ "$BRANCH" = "staging" ]; then
             echo "env=staging" >> $GITHUB_OUTPUT
             echo "tag=staging-${SHORT_SHA}" >> $GITHUB_OUTPUT
           elif [ "$BRANCH" = "master" ]; then
             echo "env=prod" >> $GITHUB_OUTPUT
             echo "tag=prod-${SHORT_SHA}" >> $GITHUB_OUTPUT
           else
-            echo "env=dev" >> $GITHUB_OUTPUT
-            echo "tag=dev-${SHORT_SHA}" >> $GITHUB_OUTPUT
+            echo "env=staging" >> $GITHUB_OUTPUT
+            echo "tag=staging-${SHORT_SHA}" >> $GITHUB_OUTPUT
           fi
 
       - name: Setup Docker Buildx builder instance
@@ -67,5 +62,3 @@ jobs:
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/auth-service:${{ steps.vars.outputs.tag }}
             ${{ secrets.DOCKERHUB_USERNAME }}/auth-service:${{ steps.vars.outputs.env }}-latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
