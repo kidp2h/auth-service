@@ -6,3 +6,5 @@ dist
 README.md
 k8s
 *.tsbuildinfo
+.github
+coverage

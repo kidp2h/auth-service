@@ -1,0 +1,128 @@
+# CI/CD for auth-service.
+#
+# - Pull requests: lint, build, test.
+# - Push to master: the same checks, then build and push an immutable image
+#   tagged with the short commit SHA, then bump the dev environment in the
+#   GitOps repo (k8s/environment/dev/auth/release.yaml, imageTag) so ArgoCD
+#   rolls it out. Staging/prod are promoted from the GitOps repo (promote
+#   workflow), never built again: build once, promote many.
+#
+# Required repository secrets:
+#   DOCKERHUB_USERNAME, DOCKERHUB_TOKEN  - Docker Hub access token with push scope
+#   GITOPS_TOKEN                         - fine-grained PAT (or GitHub App token) with
+#                                          contents:write on kidp2h/ecommerce-microservices
+
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  IMAGE: nthinhd3v/auth-service
+  SERVICE: auth
+  GITOPS_REPO: kidp2h/ecommerce-microservices
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm run lint:check
+      - run: npm run build
+      - run: npm test -- --passWithNoTests
+
+  image:
+    if: github.event_name == 'push'
+    needs: verify
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+      digest: ${{ steps.build.outputs.digest }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: meta
+        run: echo "tag=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: production
+          push: true
+          tags: ${{ env.IMAGE }}:${{ steps.meta.outputs.tag }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy-dev:
+    needs: image
+    runs-on: ubuntu-latest
+    # Serialize bumps so two merges never race on the same values file.
+    concurrency:
+      group: gitops-${{ github.repository }}-dev
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ env.GITOPS_REPO }}
+          token: ${{ secrets.GITOPS_TOKEN }}
+          path: gitops
+
+      - name: Bump imageTag in dev release.yaml
+        working-directory: gitops
+        env:
+          TAG: ${{ needs.image.outputs.tag }}
+          DIGEST: ${{ needs.image.outputs.digest }}
+        run: |
+          file="k8s/environment/dev/${SERVICE}/release.yaml"
+          # Always quoted: an all-digit short SHA must stay a string.
+          yq -i '.imageTag = strenv(TAG) | .imageTag style="double"' "$file"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$file"
+          if git diff --cached --quiet; then
+            echo "Tag already deployed to dev, nothing to do."
+            exit 0
+          fi
+          git commit -m "chore(${SERVICE}): deploy ${TAG} to dev" \
+                     -m "Image: ${IMAGE}:${TAG}" \
+                     -m "Digest: ${DIGEST}" \
+                     -m "Source: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}"
+
+          # Other services push to the same repo; rebase and retry on conflicts.
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin main && git push origin HEAD:main; then
+              exit 0
+            fi
+            git rebase --abort 2>/dev/null || true
+            echo "Push failed (attempt ${attempt}), retrying..."
+            sleep $((attempt * 3))
+          done
+          exit 1
