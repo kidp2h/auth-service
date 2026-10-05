@@ -5,6 +5,10 @@
   "author": "",
   "private": true,
   "license": "UNLICENSED",
+  "engines": {
+    "node": ">=22.0.0 <23.0.0",
+    "npm": ">=10.0.0"
+  },
   "scripts": {
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
@@ -19,7 +23,12 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "docker:build": "docker build --target production -t auth-service:local ."
+    "docker:build": "docker build --target production -t auth-service:local .",
+    "act:list": "act -l -W .github/workflows/ci.yml",
+    "act:ci": "act push -W .github/workflows/ci.yml -j verify",
+    "act:docker": "act push -W .github/workflows/ci.yml -j image --secret-file .secrets",
+    "act:dispatch": "act push -W .github/workflows/ci.yml -j deploy-dev --secret-file .secrets",
+    "act:all": "act push -W .github/workflows/ci.yml --secret-file .secrets"
   },
   "dependencies": {
     "@grpc/grpc-js": "^1.14.4",

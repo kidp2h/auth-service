@@ -57,3 +57,10 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 # Kubernetes local secrets
 k8s/argocd-repo-secret.yaml
+
+# act (Local GitHub Actions) secrets and configs
+.secrets
+.secrets.*
+!.secrets.example
+.actrc.local
+

@@ -1,7 +1,9 @@
 # ==============================================================================
-# Base stage
+# Global Arguments & Base stage
 # ==============================================================================
-FROM node:22-alpine AS base
+ARG NODE_VERSION=22.14.0-alpine3.21
+
+FROM node:${NODE_VERSION} AS base
 
 WORKDIR /usr/src/app
 
@@ -40,7 +42,7 @@ RUN npm prune --omit=dev
 # ==============================================================================
 # Production stage (lightweight production image)
 # ==============================================================================
-FROM node:22-alpine AS production
+FROM node:${NODE_VERSION} AS production
 
 WORKDIR /usr/src/app
 

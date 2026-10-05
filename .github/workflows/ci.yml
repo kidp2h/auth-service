@@ -2,15 +2,18 @@
 #
 # - Pull requests: lint, build, test.
 # - Push to master: the same checks, then build and push an immutable image
-#   tagged with the short commit SHA, then bump the dev environment in the
-#   GitOps repo (k8s/environment/dev/auth/release.yaml, imageTag) so ArgoCD
-#   rolls it out. Staging/prod are promoted from the GitOps repo (promote
-#   workflow), never built again: build once, promote many.
+#   tagged with the short commit SHA, then notify the GitOps repo with a
+#   repository_dispatch (service_updated). The GitOps repo's own gitops-sync
+#   workflow pins the tag in k8s/environment/dev/auth/release.yaml, so this
+#   repo never writes into the GitOps repo. Staging/prod are promoted from the
+#   GitOps repo (promote workflow), never built again: build once, promote many.
 #
 # Required repository secrets:
 #   DOCKERHUB_USERNAME, DOCKERHUB_TOKEN  - Docker Hub access token with push scope
-#   GITOPS_TOKEN                         - fine-grained PAT (or GitHub App token) with
-#                                          contents:write on kidp2h/ecommerce-microservices
+#   GITOPS_PAT_TOKEN                     - token allowed to send repository_dispatch
+#                                          to kidp2h/ecommerce-microservices
+#
+# Run locally with act: npm run act:ci (see .actrc, .secrets.example).
 
 name: ci
 
@@ -39,7 +42,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
 
       - run: npm ci
@@ -83,46 +86,19 @@ jobs:
   deploy-dev:
     needs: image
     runs-on: ubuntu-latest
-    # Serialize bumps so two merges never race on the same values file.
-    concurrency:
-      group: gitops-${{ github.repository }}-dev
-      cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v4
+      - name: Notify the GitOps repo
+        uses: peter-evans/repository-dispatch@v3
         with:
+          token: ${{ secrets.GITOPS_PAT_TOKEN }}
           repository: ${{ env.GITOPS_REPO }}
-          token: ${{ secrets.GITOPS_TOKEN }}
-          path: gitops
-
-      - name: Bump imageTag in dev release.yaml
-        working-directory: gitops
-        env:
-          TAG: ${{ needs.image.outputs.tag }}
-          DIGEST: ${{ needs.image.outputs.digest }}
-        run: |
-          file="k8s/environment/dev/${SERVICE}/release.yaml"
-          # Always quoted: an all-digit short SHA must stay a string.
-          yq -i '.imageTag = strenv(TAG) | .imageTag style="double"' "$file"
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add "$file"
-          if git diff --cached --quiet; then
-            echo "Tag already deployed to dev, nothing to do."
-            exit 0
-          fi
-          git commit -m "chore(${SERVICE}): deploy ${TAG} to dev" \
-                     -m "Image: ${IMAGE}:${TAG}" \
-                     -m "Digest: ${DIGEST}" \
-                     -m "Source: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}"
-
-          # Other services push to the same repo; rebase and retry on conflicts.
-          for attempt in 1 2 3 4 5; do
-            if git pull --rebase origin main && git push origin HEAD:main; then
-              exit 0
-            fi
-            git rebase --abort 2>/dev/null || true
-            echo "Push failed (attempt ${attempt}), retrying..."
-            sleep $((attempt * 3))
-          done
-          exit 1
+          event-type: service_updated
+          client-payload: |
+            {
+              "service": "${{ env.SERVICE }}",
+              "env": "dev",
+              "tag": "${{ needs.image.outputs.tag }}",
+              "digest": "${{ needs.image.outputs.digest }}",
+              "commit_sha": "${{ github.sha }}",
+              "repository": "${{ github.repository }}"
+            }
