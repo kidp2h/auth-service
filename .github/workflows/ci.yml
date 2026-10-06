@@ -5,8 +5,8 @@
 #   tagged with the short commit SHA, then notify the GitOps repo with a
 #   repository_dispatch (service_updated). The GitOps repo's own gitops-sync
 #   workflow pins the tag in k8s/environment/dev/auth/release.yaml, so this
-#   repo never writes into the GitOps repo. Staging/prod are promoted from the
-#   GitOps repo (promote workflow), never built again: build once, promote many.
+#   repo never writes into the GitOps repo. Prod is promoted from the GitOps
+#   repo (promote workflow), never built again: build once, promote many.
 #
 # Required repository secrets:
 #   DOCKERHUB_USERNAME, DOCKERHUB_TOKEN  - Docker Hub access token with push scope
