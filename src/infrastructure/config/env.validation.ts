@@ -1,5 +1,6 @@
 import { plainToInstance } from 'class-transformer';
 import {
+  IsIn,
   IsNumber,
   IsString,
   IsNotEmpty,
@@ -19,6 +20,10 @@ export class EnvironmentVariables {
   @IsString()
   @IsNotEmpty()
   DATABASE_URL!: string;
+
+  @IsIn(['true', 'false'])
+  @IsOptional()
+  DATABASE_SSL?: string;
 
   @IsString()
   @IsNotEmpty()

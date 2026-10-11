@@ -19,6 +19,12 @@ import { AuthModule } from './auth.module';
       useFactory: (configService: ConfigService) => ({
         type: 'postgres',
         url: configService.get<string>('DATABASE_URL'),
+        // Managed Postgres (Supabase, Neon, RDS) requires TLS. Certificate
+        // verification is off until a CA bundle is mounted.
+        ssl:
+          configService.get<string>('DATABASE_SSL') === 'true'
+            ? { rejectUnauthorized: false }
+            : false,
         autoLoadEntities: true,
         synchronize: true, // Only for development/demo
       }),
