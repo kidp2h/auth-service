@@ -8,6 +8,8 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
   const app = await NestFactory.create(AppModule);
+  // SIGTERM/SIGINT: run shutdown hooks (readiness flips to 503, then connections close).
+  app.enableShutdownHooks();
 
   const configService = app.get(ConfigService);
   const port = configService.get<number>('PORT')!;

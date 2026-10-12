@@ -6,6 +6,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 import { join } from 'path';
 import { AuthController } from './presentation/controllers/auth.controller';
+import { HealthController } from './presentation/controllers/health.controller';
+import { ReadinessService } from '@infrastructure/health/readiness.service';
 import { AuthGrpcController } from './presentation/controllers/auth-grpc.controller';
 import { AuthService } from './application/services/auth.service';
 import { TypeOrmAccountAdapter } from '@infrastructure/database/typeorm-account.adapter';
@@ -49,9 +51,10 @@ import {
       },
     ]),
   ],
-  controllers: [AuthController, AuthGrpcController],
+  controllers: [AuthController, AuthGrpcController, HealthController],
   providers: [
     AuthService,
+    ReadinessService,
     {
       provide: 'REDIS_CLIENT',
       inject: [ConfigService],
