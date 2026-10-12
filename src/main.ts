@@ -8,6 +8,7 @@ import { DataSource } from 'typeorm';
 import { join } from 'node:path';
 import { AppModule } from './app.module';
 import { runMigrations } from '@infrastructure/database/run-migrations';
+import { setupSwagger } from '@presentation/swagger/setup-swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
@@ -21,6 +22,12 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
   const port = configService.get<number>('PORT')!;
   const authGrpcUrl = configService.get<string>('AUTH_GRPC_URL')!;
+
+  // API documentation exists only where it is switched on (dev): everywhere
+  // else /auth/docs is a plain 404 because the routes are never registered.
+  if (configService.get<string>('SWAGGER_ENABLED') === 'true') {
+    setupSwagger(app);
+  }
 
   app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.GRPC,
