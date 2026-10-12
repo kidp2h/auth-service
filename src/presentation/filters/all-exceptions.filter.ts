@@ -84,6 +84,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
         return 'NOT_FOUND';
       case HttpStatus.CONFLICT:
         return 'CONFLICT';
+      case HttpStatus.SERVICE_UNAVAILABLE:
+        return 'SERVICE_UNAVAILABLE';
       case HttpStatus.INTERNAL_SERVER_ERROR:
       default:
         return 'INTERNAL_SERVER_ERROR';
