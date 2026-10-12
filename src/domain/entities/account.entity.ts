@@ -1,28 +1,9 @@
-import { Entity, PrimaryColumn, Column } from 'typeorm';
-
-@Entity('accounts')
+// Pure domain object: no framework or persistence imports. Mapping to the
+// `accounts` table lives in infrastructure/database/entities.
 export class Account {
-  @PrimaryColumn('uuid')
-  id!: string;
-
-  @Column({ unique: true })
-  email!: string;
-
-  @Column()
-  passwordHash!: string;
-
-  @Column({ name: 'user_id', type: 'uuid', nullable: true })
-  userId?: string | null;
-
   constructor(
-    id: string,
-    email: string,
-    passwordHash: string,
-    userId?: string | null,
-  ) {
-    this.id = id;
-    this.email = email;
-    this.passwordHash = passwordHash;
-    this.userId = userId;
-  }
+    public readonly id: string,
+    public readonly email: string,
+    public readonly passwordHash: string,
+  ) {}
 }
