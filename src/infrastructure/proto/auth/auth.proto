@@ -1,6 +1,9 @@
 syntax = "proto3";
 
-package auth;
+// auth-service owns this contract. Versioned package: breaking changes go to a
+// new package (auth.v2); within auth.v1 only add optional fields and never
+// reuse or renumber existing ones.
+package auth.v1;
 
 service AuthService {
   rpc VerifyToken (VerifyTokenRequest) returns (VerifyTokenResponse);

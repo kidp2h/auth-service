@@ -6,18 +6,28 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 import { join } from 'path';
 import { AuthController } from './presentation/controllers/auth.controller';
-import { HealthController } from './presentation/controllers/health.controller';
-import { ReadinessService } from '@infrastructure/health/readiness.service';
 import { AuthGrpcController } from './presentation/controllers/auth-grpc.controller';
+import { HealthController } from './presentation/controllers/health.controller';
 import { AuthService } from './application/services/auth.service';
+import { ReadinessService } from '@infrastructure/health/readiness.service';
 import { TypeOrmAccountAdapter } from '@infrastructure/database/typeorm-account.adapter';
+import { TypeOrmRefreshTokenAdapter } from '@infrastructure/database/typeorm-refresh-token.adapter';
+import { AccountOrmEntity } from '@infrastructure/database/entities/account.orm-entity';
+import { RefreshTokenOrmEntity } from '@infrastructure/database/entities/refresh-token.orm-entity';
+import { OutboxOrmEntity } from '@infrastructure/database/entities/outbox.orm-entity';
 import { UserProfileGrpcAdapter } from '@infrastructure/clients/user-profile-grpc.adapter';
 import { RedisSessionAdapter } from '@infrastructure/clients/redis-session.adapter';
+import { RedisLoginAttemptAdapter } from '@infrastructure/clients/redis-login-attempt.adapter';
+import { OutboxRelayService } from '@infrastructure/messaging/outbox-relay.service';
 import { Argon2HashService } from '@infrastructure/services/argon2-hash.service';
+import { JwtKeyStore } from '@infrastructure/services/jwt-key-store';
 import { JwtTokenService } from './infrastructure/services/jwt-token.service';
-import { Account } from '@domain/entities/account.entity';
 import {
   ACCOUNT_PORT,
+  AUTH_CONFIG,
+  AuthConfig,
+  LOGIN_ATTEMPT_PORT,
+  REFRESH_TOKEN_PORT,
   SESSION_PORT,
   HASH_SERVICE,
   TOKEN_SERVICE,
@@ -26,15 +36,13 @@ import {
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Account]),
-    JwtModule.registerAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET'),
-        signOptions: { expiresIn: '1h' },
-      }),
-    }),
+    TypeOrmModule.forFeature([
+      AccountOrmEntity,
+      RefreshTokenOrmEntity,
+      OutboxOrmEntity,
+    ]),
+    // Keys and algorithms are passed per call by JwtTokenService (JwtKeyStore).
+    JwtModule.register({}),
     ClientsModule.registerAsync([
       {
         name: 'USER_PACKAGE',
@@ -55,6 +63,25 @@ import {
   providers: [
     AuthService,
     ReadinessService,
+    JwtKeyStore,
+    OutboxRelayService,
+    {
+      provide: AUTH_CONFIG,
+      inject: [ConfigService],
+      useFactory: (config: ConfigService): AuthConfig => ({
+        accessTtlSeconds: config.get<number>('JWT_ACCESS_TTL_SECONDS') ?? 900,
+        refreshTtlSeconds:
+          config.get<number>('REFRESH_TOKEN_TTL_SECONDS') ?? 7 * 24 * 3600,
+        profileSyncMode:
+          config.get<string>('PROFILE_SYNC_MODE') === 'event'
+            ? 'event'
+            : 'grpc',
+        maxFailuresPerEmail:
+          config.get<number>('LOGIN_MAX_FAILURES_PER_EMAIL') ?? 5,
+        maxFailuresPerIp: config.get<number>('LOGIN_MAX_FAILURES_PER_IP') ?? 50,
+        lockSeconds: config.get<number>('LOGIN_LOCK_SECONDS') ?? 900,
+      }),
+    },
     {
       provide: 'REDIS_CLIENT',
       inject: [ConfigService],
@@ -68,6 +95,14 @@ import {
     {
       provide: ACCOUNT_PORT,
       useClass: TypeOrmAccountAdapter,
+    },
+    {
+      provide: REFRESH_TOKEN_PORT,
+      useClass: TypeOrmRefreshTokenAdapter,
+    },
+    {
+      provide: LOGIN_ATTEMPT_PORT,
+      useClass: RedisLoginAttemptAdapter,
     },
     {
       provide: USER_PROFILE_PORT,

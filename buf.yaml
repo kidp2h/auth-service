@@ -1,0 +1,16 @@
+# Contract checks for the protos this service OWNS (src/infrastructure/proto/auth).
+# user.proto next to it is a copy of profile-service's contract: not ours to
+# version, and not part of this module. It goes away when account.created
+# replaces the synchronous CreateProfile call.
+version: v2
+modules:
+  - path: src/infrastructure/proto/auth
+lint:
+  use:
+    - STANDARD
+  except:
+    # The file is not under an auth/v1/ directory tree.
+    - PACKAGE_DIRECTORY_MATCH
+breaking:
+  use:
+    - FILE

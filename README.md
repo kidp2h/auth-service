@@ -70,6 +70,28 @@ $ mau deploy
 
 With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
 
+## Operations
+
+### Endpoints
+
+| Endpoint | Purpose |
+|---|---|
+| `POST /auth/register`, `POST /auth/login` | Create an account / sign in. Returns `accessToken` (15 min), `refreshToken` (7 days), `expiresIn` |
+| `POST /auth/refresh` | Rotates the refresh token. Replaying an already used token revokes the whole token family |
+| `POST /auth/logout` | Revokes the access token session and, if sent, the refresh token family |
+| `GET /auth/.well-known/jwks.json` | Public keys for local verification by other services |
+| `GET /auth/health/live` | Liveness: no dependency checks |
+| `GET /auth/health/ready` | Readiness: Postgres and Redis |
+| `:9100/metrics` | Prometheus (internal port only, never routed by the Ingress) |
+
+### Database migrations
+
+Schema changes are versioned migrations in `src/infrastructure/database/migrations`, applied at startup in one transaction under an advisory lock (`synchronize` is off). Follow expand, migrate, contract: never edit a released migration, and drop a column only after no running version uses it (the legacy `accounts.user_id` is still to be dropped this way).
+
+### Profile creation on register
+
+`PROFILE_SYNC_MODE=grpc` (default) calls profile-service with a deadline, retries, a circuit breaker and a compensating delete. `event` writes an `account.created` event to the outbox in the same transaction as the account and relays it to Kafka; profile-service must consume it first.
+
 ## Resources
 
 Check out a few resources that may come in handy when working with NestJS:
