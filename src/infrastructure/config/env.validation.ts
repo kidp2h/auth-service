@@ -109,6 +109,12 @@ export class EnvironmentVariables {
   @IsOptional()
   METRICS_PORT?: number;
 
+  // Serves the Swagger UI at /auth/docs. Set for dev only: when it is not
+  // 'true' the documentation routes are not registered at all (404).
+  @IsIn(['true', 'false'])
+  @IsOptional()
+  SWAGGER_ENABLED?: string;
+
   @IsString()
   @IsOptional()
   NODE_ENV?: string;
